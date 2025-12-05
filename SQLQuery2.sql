@@ -1,300 +1,208 @@
-/**• Views 
-• CTE 
-• Programming 
-• Ranking (01-12-2025)**/
+/**1. 
+Create a procedure which accepts input parameter and inserts the 
+data in the customer table.
+**/
+ create table customer
+ (
+ custid int identity(1,1),
+ custname varchar(20),
+ custage int,
+ address varchar(20)
+ )
 
-------------EMPLOYEES----------------------------------------
+create procedure valueinsert(@cname varchar(20), @cage int, @address varchar(20)) 
+as
+insert into customer values(@cname, @cage,@address)
+return scope_identity()
 
-CREATE TABLE Employees 
-( 
-    EmpId INT PRIMARY KEY, 
-    EmpName VARCHAR(100), 
-    DeptId INT, 
-    ManagerId INT NULL, 
-    JoinDate DATE, 
-    Salary DECIMAL(10,2) 
-); 
+declare @res int 
+exec @res = valueinsert 'Aasritha',21, 'Bangalore'
+print @res
+
+select * from customer
+
+/**
+2.  Create a procedure for orders table , which displays all the purchase 
+made between  1-12-2005  and 2-12-2007 
+(Accept date as parameter_)**/
+
+
+
+create procedure orderstable(@start date, @end date)
+as
+select * from Orders where orderdate between @start and @end
+
+exec orderstable '2005-12-1', '2007-12-2'
+
+select * from Orders
+
+
+
+/**
+3. create a procedure which reads custid as parameter  
+and return qty and produtid as output parameter
+**/
  
-INSERT INTO Employees VALUES 
-(1, 'Amit', 10, NULL, '2020-01-10', 65000), 
-(2, 'Neha', 10, 1,    '2022-02-15', 50000), 
-(3, 'Ravi', 20, 1,    '2023-03-12', 45000), 
-(4, 'Sana', 20, 3,    '2024-01-20', 42000), 
-(5, 'Karan', 30, 1,   '2021-07-18', 55000);
+alter procedure GetOrderQtyAndProduct
+(@ccustid int,
+@cqty int output,
+@cproductid int output)
+as select 
+@cqty = o.qty,
+@cproductid = p.productid
+from  Orders as o
+inner join Products as p
+on o.custid = p.custid
+where o.custid = @ccustid;
 
-select * from Employees
+declare @qty int
+declare @pid int
+exec GetOrderQtyAndProduct @ccustid=101,@cqty=@qty output,@cproductid=@pid output
 
---------------------------DEPARTMENTS------------------------------------
-CREATE TABLE Departments 
-( 
-    DeptId INT PRIMARY KEY, 
-    DeptName VARCHAR(100) 
-); 
- 
-INSERT INTO Departments VALUES 
-(10, 'IT'), 
-(20, 'HR'), 
-(30, 'Finance');
-
-select * from Departments
-
------------------------------------SALES---------------------------------------
-CREATE TABLE Sales 
-( 
-    SaleId INT PRIMARY KEY, 
-    EmpId INT, 
-    Region VARCHAR(50), 
-    SaleAmount DECIMAL(10,2), 
-    SaleDate DATE 
-); 
- 
-INSERT INTO Sales VALUES 
-(1, 1, 'North', 100000, '2024-01-01'), 
-(2, 2, 'North',  90000, '2024-01-10'), 
-(3, 3, 'South', 120000, '2024-02-05'), 
-(4, 4, 'South', 120000, '2024-02-20'), 
-(5, 5, 'North', 110000, '2024-03-15');
-
-select * from Sales
-
----------------------------TRANSACTIONS----------------------------------------------
-
-CREATE TABLE Transactions 
-( 
-    TransId INT PRIMARY KEY, 
-    AccountId INT, 
-    Amount DECIMAL(10,2), 
-    TransDate DATE 
-); 
- 
-INSERT INTO Transactions VALUES 
-(1, 101, 1000, '2024-01-01'), 
-(2, 101, 2000, '2024-02-01'), 
-(3, 101, -500, '2024-03-01'), 
-(4, 102, 1500, '2024-01-15'), 
-(5, 102, -200, '2024-03-10');
-
-select * from Transactions
-
-----------------------------------------------------------------------
-select * from Employees
-select * from Departments
-select * from Sales
-select * from Transactions
+print @qty
+print @pid
 
 
-/**
-Task-1 
-Write a query using CASE to categorize salary levels on Employees table: 
-• <20000 ? Low 
-• 20000–50000 ? Medium 
-• 50000 ? High 
-**/
 
-select 
-EmpId,
-EmpName,
-Salary,
-case 
-when salary<2000 then 'Low'
-when salary between 20000 and 50000 then 'Medium'
-else 'High'
-end as Salarylvl
-from Employees
-
-/**
-Task -2 
- 
-Declare a variable @Age. 
-Write logic using IF / ELSE: 
-• If Age < 18 ? print “Minor” 
-• Else If Age between 18–60 ? “Adult” 
-**/
-
-
-declare @age int
-set @age=(18)
-if(@age<18)
-print'Minor'
-else if(@age between 18 and 60)
-print'Adult'
-else 
-print'Senior'
-
-/**
-Task-3 Encrypted & Schema-Bound View 
-Create an encrypted and schemabound view that: 
-• Joins Employees, Departments, and Salaries tables 
-• Returns only employees who joined in the last 3 years 
-• Includes computed column: AnnualSalary = Salary * 12 
-• Prevents updates to base tables that break schema binding 
-Tasks 
-1. Create the view with WITH SCHEMABINDING, ENCRYPTION. 
-2. Try altering an underlying table column ? observe the error.
-**/
-
-select * from Employees
-select * from Departments
-select * from Sales
-select * from Transactions
-
-create view  dbo.RecentEmployees
-with schemabinding, Encryption as
-select e.EmpId,e.Empname,e.DeptId,e.ManagerId,e.JoinDate,e.Salary, AnnualSalary = e.Salary * 12
-from dbo.Employees as e
-join dbo.Departments as d on e.DeptId = d.DeptId
-where e.JoinDate >= Dateadd(Year, -3, Getdate())
-with check option
-
-alter table dbo.Employees alter column EmpName
-Nvarchar(200)
-
-/**
-Task-4— Complex Multi-Table View 
-Create a view that: 
-• Joins Employees + Sales 
-• Shows total sales per employee 
-• Shows rank based on total sales across company 
-**/
-
-select * from Employees
-select * from Departments
-select * from Sales
-select * from Transactions
-
-select sum (s.SaleAmount) as totalsales,e.EmpName, 
-rank() over (partition by e.EmpName order by sum(s.SaleAmount)desc) as rankbytotalsales  
-from  Employees as e
-join Sales as s
-on
-e.EmpId=s.empid
-group by e.EmpName
-
-/**
-Task-5— Simulate Error Capture 
-Write a block that: 
-• Attempts dividing by zero 
-• Catches the error 
-• Prints error details
-**/
-
-begin try
-declare @a int 
-set @a = 10
-print @a/0
-end try
-begin catch 
-print' you cannot divide by 0'
-print'Error_message'
-end catch
-
-/**
-Task-6— Nested TRY…CATCH With Custom Error 
-Validate salary: 
-• If salary < 1000, throw custom error using THROW. 
-• Declare variable  to simulate salary
-**/
-
-select * from Employees
-
-begin try 
-declare @salary int 
-set @salary=1800
-print @salary/0
-end try 
-begin catch 
-if(@salary<1000)
-throw 50001,'NOT VALID',1
-print 'salary not valid'
-end catch
-
-/**
-Task-7— Rank Employees by Region Sales 
-Task 
-• Compare Rank / Dense_Rank / Row_Number 
-• Identify top 2 per region
-**/
-
-select * from Employees 
-select * from Sales
-select * from Departments
-select * from Transactions
-
-
-Select Region, EmpName, SaleAmount,
-       RANK() Over (Partition By Region Order By SaleAmount Desc) as RankValue,
-       DENSE_RANK() Over (Partition By Region Order By SaleAmount Desc) as DenseRankValue,
-       ROW_NUMBER() Over (Partition By Region Order By SaleAmount Desc) as nRowNumValue
-From Sales s
-Join Employees e on s.EmpId = e.EmpId;
-Select *
-From (
-    Select Region, EmpName, SaleAmount,
-           RANK() Over (Partition By Region Order By SaleAmount Desc) AS RankValue
-    From Sales s
-    Join Employees e on s.EmpId = e.EmpId
-) ranked
-Where RankValue <= 2;
-
-/**
-Task-8 -Using Sales table: 
-• First CTE: Filter only last 1 year sales 
-• Second CTE: Compute total sales per region 
-• Third CTE: Rank regions based on total sales 
-• Output top 3 regions 
- 
-Task-8 Find Employees With Duplicate SalesAmount in Any Department
-**/
-
-select * from Sales
-
-WITH LastYearSales AS (
-    SELECT *
-    FROM Sales
-    WHERE SaleDate >= DATEADD(YEAR, -1, GETDATE())  -- last 1 year
-),
-RegionSales AS (
-    SELECT Region, SUM(SaleAmount) AS TotalSales
-    FROM LastYearSales
-    GROUP BY Region
-),
-RankedRegions AS (
-    SELECT Region, TotalSales,
-           RANK() OVER (ORDER BY TotalSales DESC) AS SalesRank
-    FROM RegionSales
-)
-SELECT Region, TotalSales
-FROM RankedRegions
-WHERE SalesRank <= 3;
-
-
-SELECT e.DeptId, s.SaleAmount, COUNT(*) AS DuplicateCount
-FROM Employees e
-JOIN Sales s ON e.EmpId = s.EmpId
-GROUP BY e.DeptId, s.SaleAmount
-HAVING COUNT(*) > 1;
- 
  /**
- Task – 9 
-Perform Pagination and list all details from employees who’s page between 6 and 10
+ 4. Write a batch that will check for the existence of the productname 
+“books” if it exists, display the total stock of the book else print  
+“productname books not found”.
 **/
 
-
-With OrderedEmployees as (
-    Select ROW_NUMBER() Over (Order By EmpId) as RowNum, *
-    From Employees
+declare @Productname varchar(50) = 'book'
+if exists (
+select * from Product1 where pname = @Productname
 )
-Select *
-From OrderedEmployees
-Where RowNum BETWEEN 51 AND 100;  
+select sum(totalstock) as Totalstock
+from Product1
+where pname = @Productname
+else
+print concat('productname', @Productname, 'not found')
+
+/**
+5.insert  data to customer table via return value of sp_getdata() 
+procedure
+**/
+
+select * into newtable1 from customer
+delete  from newtable1
+select * from newtable1
+select * from customer
+
+alter procedure sp_getdata
+as
+select * from customer 
+
+insert into newtable1 exec sp_getdata
+
+/**
+6. Create a procedure to display all customer details where rownumber 
+between 2 to 5 (accept row number as a parameter)
+**/
+
+create procedure sp_getcustomers_by_rownum
+@start int,
+@end int 
+as with CTE2 as (
+select *,ROW_NUMBER()over(order by custage desc) as RN from customer
+)
+select RN from CTE2
+where RN between @start and @end
+
+exec sp_getcustomers_by_rownum 2,5;
+
+select * from customer
+
+/**
+7.Create a stored procedure to insert a new employee 
+Create a table Employees and write a stored procedure: 
+• Procedure name: spAddEmployee 
+• Inputs: Name, Department, Salary 
+• Insert the record into Employees table. 
+• Return newly generated CustomerID using SCOPE_IDENTITY().
+**/
+
+create table Employees 
+(
+EmployeeID int identity(1,1) primary key ,
+Name varchar(50), 
+Department varchar(50), 
+Salary decimal(10,2)
+)
+create procedure spAddEmployee
+@Name varchar(50),
+@Department varchar(50),
+@Salary decimal(10,2)
+as
+insert into Employees(Name, Department, Salary)
+values (@Name, @Department, @Salary);
+
+return Scope_Identity
 
 
+declare @EmpID int;
+exec @EmpID = spAddEmployee 'John', 'IT', 55000;
+print 'New Employee ID: ' + cast(@EmpID AS VARCHAR);
 
+/**9. Stored procedure using TRY…CATCH 
+Create spSafeOrderInsert 
+• Insert a new order 
+• If any error occurs, insert error details into an ErrorLog table**/
 
+create table ErrorLog (
+    LogID int identity(1,1),
+    ErrorMessage nvarchar(4000),
+    OccurredAt datetime default getdate()
+);
 
+create procedure sp_OrderInsert
+    @custID int,
+    @productID int,
+    @qty int
+as
+begin try
+        insert into Orders (custid, product, qty)
+        values (@custid, @productID,@qty)
+end try
+begin catch
+        insert into ErrorLog(ErrorMessage)
+        values (ERROR_MESSAGE());
+end catch
 
+/**
+10.Stored procedure with multiple operations 
+Create spUpdateSalary 
+• Inputs: EmpID, Percentage 
+• Increase employee salary by given percentage 
+• Return updated salary
+**/
 
-
+select * from Employees;
+ 
+CREATE PROCEDURE spUpdateSalary
+    @EmpID INT,
+    @Percentage DECIMAL(5,2),
+    @UpdatedSalary DECIMAL(10,2) OUTPUT
+AS
+BEGIN
+    -- Increase salary by given percentage
+    UPDATE Employees
+    SET Salary = Salary + (Salary * @Percentage / 100)
+    WHERE EmpId = @EmpID;
+ 
+ 
+    -- Return updated salary
+       SELECT @UpdatedSalary = Salary FROM Employees WHERE EmpId = @EmpID;
+END;
+ 
+ 
+DECLARE @NewSalary DECIMAL(10,2);
+ 
+EXEC spUpdateSalary 
+    @EmpID =  4,
+       @Percentage = 10, 
+    @UpdatedSalary = @NewSalary OUTPUT;
 
 
 
@@ -307,5 +215,7 @@ Where RowNum BETWEEN 51 AND 100;
 
 
  
+ 
+
 
 
